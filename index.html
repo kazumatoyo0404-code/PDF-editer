@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<!-- saved from url=(0069)file:///C:/Users/220134_anabuki/Downloads/kouiki-zu-maker-v6.6_3.html -->
+<!-- saved from url=(0069)file:///C:/Users/220134_anabuki/Downloads/kouiki-zu-maker-v6.6.1.html -->
 <html lang="ja"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>広域図メーカー v6.6｜周辺マップ作成・再編集PDF・ページ番号</title>
+<title>広域図メーカー v6.6.1｜周辺マップ作成・再編集PDF・ページ番号</title>
 <script src="./広域図メーカー v6.4｜周辺マップ作成・再編集PDF・ページ番号_files/pdf.min.js.ダウンロード"></script>
 <script src="./広域図メーカー v6.4｜周辺マップ作成・再編集PDF・ページ番号_files/pdf-lib.min.js.ダウンロード"></script>
 <style>
@@ -411,8 +411,8 @@
 (function(){
 "use strict";
 pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
-const PDFJS_CMAP="https://unpkg.com/pdfjs-dist@3.11.174/cmaps/";
-const PDFJS_FONTS="https://unpkg.com/pdfjs-dist@3.11.174/standard_fonts/";
+const PDFJS_CMAP="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/";
+const PDFJS_FONTS="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/standard_fonts/";
 
 document.querySelectorAll("#tabs .tab").forEach(t=>{
   t.addEventListener("click", ()=>{
@@ -1369,7 +1369,18 @@ async function pageImage(pg){
       const w1=pageObj.getViewport({scale:1}).width;
       if(w1) forceScale=pg.w/w1;
     }
-    const r=await renderDocPageToImage(pg.pdfDoc, (pg.pdfPage||0)+1, forceScale);
+    let r;
+    try{
+      r=await renderDocPageToImage(pg.pdfDoc, (pg.pdfPage||0)+1, forceScale);
+    }catch(err){
+      // 外部フォント/cMapの取得失敗などで描画できない場合、フォント参照なしで再読込して描画（地図は必ず表示する）
+      console.warn("通常描画に失敗、フォントなしで再試行:",err);
+      if(!pg._plainDoc && pg.pdfBuf){
+        try{ pg._plainDoc=await pdfjsLib.getDocument({data:new Uint8Array(pg.pdfBuf.slice(0))}).promise; }catch(e){ console.warn(e); }
+      }
+      if(pg._plainDoc){ r=await renderDocPageToImage(pg._plainDoc, (pg.pdfPage||0)+1, forceScale); }
+      else throw err;
+    }
     pg.bgImage=r.img; pg.w=r.w; pg.h=r.h;
     if(pg._needFreeText){ pg._needFreeText=false; await importFreeTextEdits(r, pg.items); }
     return pg.bgImage;
