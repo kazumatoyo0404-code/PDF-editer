@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<!-- saved from url=(0069)file:///C:/Users/220134_anabuki/Downloads/kouiki-zu-maker-v6.6.1.html -->
+<!-- saved from url=(0062)file:///C:/Users/220134_anabuki/Downloads/pdf-editor-v6.7.html -->
 <html lang="ja"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>広域図メーカー v6.6.1｜周辺マップ作成・再編集PDF・ページ番号</title>
-<script src="./広域図メーカー v6.4｜周辺マップ作成・再編集PDF・ページ番号_files/pdf.min.js.ダウンロード"></script>
-<script src="./広域図メーカー v6.4｜周辺マップ作成・再編集PDF・ページ番号_files/pdf-lib.min.js.ダウンロード"></script>
+<title>PDF-Editor｜地図・PDF編集・再編集PDF・ページ番号</title>
+<script src="./PDF-Editor｜地図・PDF編集・再編集PDF・ページ番号_files/pdf.min.js.ダウンロード"></script>
+<script src="./PDF-Editor｜地図・PDF編集・再編集PDF・ページ番号_files/pdf-lib.min.js.ダウンロード"></script>
 <style>
   :root{
     --panel:#1b232c; --panel-2:#232d38; --line:#33404e;
@@ -183,7 +183,7 @@
 
 <div id="tabs">
   <button id="menu-toggle" aria-label="メニューを開閉">☰</button>
-  <button class="tab on" data-view="mapview">広域図メーカー</button>
+  <button class="tab on" data-view="mapview">PDF-Editor</button>
   <button class="tab" data-view="numview">PDFページ番号</button>
   <span class="priv">全処理PC内完結・サーバー送信なし・自動保存なし（タブを閉じると消えます）</span>
 </div>
@@ -339,7 +339,7 @@
     <div id="scroller">
       <div id="wrap" style="width: 1400px; height: 900px;">
         <canvas id="cv" width="1400" height="900" style="width: 1400px; height: 900px;"></canvas>
-        <canvas id="ov" width="1400" height="900" style="width: 1400px; height: 900px;"></canvas><div id="drop"><b>地図の画像・PDFをドロップ / Ctrl+V で貼り付け</b>ゼンリン・Googleマップのスクリーンショットや、地図PDFをそのまま背景にできます<br>本ツールで保存したPDFなら編集状態ごと復元されます<br>データはこのPCの中だけで処理されます</div>
+        <canvas id="ov" width="1400" height="900" style="width: 1400px; height: 900px;"></canvas><div id="drop" style="cursor: pointer;"><b>ここをクリックしてファイルを選択</b>または 画像・PDF をドラッグ＆ドロップ／<span class="kbd">Ctrl+V</span> で貼り付け<br>ゼンリン・Googleマップのスクリーンショットや、地図PDFをそのまま背景にできます<br>本ツールで保存したPDFなら編集状態ごと復元されます<br>データはこのPCの中だけで処理されます</div>
       </div>
     </div>
     <div id="pn-panel" hidden="">
@@ -1313,7 +1313,7 @@ async function loadPdfFile(file){
     let att=null;
     try{ const atts=await doc.getAttachments();
       if(atts) for(const k of Object.keys(atts)){ if(k.indexOf("kouiki-data")!==-1){ att=atts[k]; break; } } }catch(err){}
-    if(att && confirm("このPDFは広域図メーカーで作成されています。\n編集状態を復元しますか？\n（キャンセル：ただの背景として開く）")){
+    if(att && confirm("このPDFはPDF-Editorで作成されています。\n編集状態を復元しますか？\n（キャンセル：ただの背景として開く）")){
       await restoreFromExport(doc,buf,att); return;
     }
     // 通常のPDF：複数ページなら「各ページを作成ページとして取り込む」か確認
@@ -1426,6 +1426,8 @@ async function restoreFromExport(doc, buf, att){
 }
 
 $("btn-open").addEventListener("click", ()=> $("file").click());
+$("drop").addEventListener("click", ()=> $("file").click());
+$("drop").style.cursor="pointer";
 $("file").addEventListener("change", e=>{ const f=e.target.files[0]; if(!f) return; routeFile(f); e.target.value=""; });
 function routeFile(f){
   if(f.type==="application/pdf"||/\.pdf$/i.test(f.name)) loadPdfFile(f);
@@ -1443,10 +1445,20 @@ document.addEventListener("paste", e=>{
   }
 });
 function hasFiles(e){ try{ return [...e.dataTransfer.types].includes("Files"); }catch(_){ return false; } }
-["dragenter","dragover"].forEach(t=> document.addEventListener(t, e=>{ if(!hasFiles(e)) return; e.preventDefault(); document.body.classList.add("dragover"); }));
-["dragleave","drop"].forEach(t=> document.addEventListener(t, e=>{ if(!hasFiles(e)) return; e.preventDefault(); document.body.classList.remove("dragover"); }));
-document.addEventListener("drop", e=>{ if(!hasFiles(e)) return; if(!$("numview").hidden){ addNumFiles(e.dataTransfer.files); return; }
-  const f=e.dataTransfer.files[0]; if(f) routeFile(f); });
+["dragenter","dragover"].forEach(t=> document.addEventListener(t, e=>{
+  if(stripDragFrom>=0) return;                 // ページ並べ替え中はブラウザのD&Dに介入しない
+  e.preventDefault();                            // Chrome等でファイルのドロップを確実に許可する
+  if(hasFiles(e)) document.body.classList.add("dragover");
+}));
+["dragleave","dragend"].forEach(t=> document.addEventListener(t, e=>{ document.body.classList.remove("dragover"); }));
+document.addEventListener("drop", e=>{
+  if(stripDragFrom>=0) return;                   // チップ並べ替えのドロップは各チップ側で処理
+  document.body.classList.remove("dragover");
+  if(!hasFiles(e)) return;
+  e.preventDefault();
+  if(!$("numview").hidden){ addNumFiles(e.dataTransfer.files); return; }
+  const f=e.dataTransfer.files[0]; if(f) routeFile(f);
+});
 
 /* ---------- ズーム ---------- */
 function applyZoom(){
@@ -1478,7 +1490,7 @@ async function renderPageDataURL(pg){
 $("btn-png").addEventListener("click", async ()=>{
   commitCurrentToPage();
   const suffix = pages.length>1 ? `_p${pageIdx+1}` : "";
-  download(await renderPageDataURL(pages[pageIdx]), `広域図_${stamp()}${suffix}.png`);
+  download(await renderPageDataURL(pages[pageIdx]), `PDF-Editor_${stamp()}${suffix}.png`);
 });
 $("btn-print").addEventListener("click", async ()=>{
   commitCurrentToPage();
@@ -1489,7 +1501,7 @@ $("btn-print").addEventListener("click", async ()=>{
   let imgs="";
   try{ for(const pg of pages){ imgs+=`<div class="pg"><img src="${await renderPageDataURL(pg)}"></div>`; } }
   finally{ busy(false); await applyCurrentPage(); }
-  w.document.write(`<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><title>広域図 印刷</title>
+  w.document.write(`<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><title>PDF-Editor 印刷</title>
     <style>@page{size:${paper};margin:6mm}html,body{margin:0;padding:0}
       .pg{width:100%;height:100vh;display:flex;align-items:center;justify-content:center;page-break-after:always;break-after:page}
       .pg:last-child{page-break-after:auto;break-after:auto}
@@ -1615,9 +1627,9 @@ async function exportPDF(){
       pages: pages.map(p=>({w:p.w,h:p.h,items:p.items}))});
     await out.attach(new TextEncoder().encode(json),DATA_FILE,{
       mimeType:"application/json",
-      description:"広域図メーカー編集データ（このPDFを広域図メーカーで開くと編集状態が復元されます）"});
+      description:"PDF-Editor編集データ（このPDFをPDF-Editorで開くと編集状態が復元されます）"});
     const bytes=await out.save(); const blob=new Blob([bytes],{type:"application/pdf"});
-    download(URL.createObjectURL(blob),`広域図_${stamp()}.pdf`);
+    download(URL.createObjectURL(blob),`PDF-Editor_${stamp()}.pdf`);
   }catch(err){ console.error(err); alert("PDFの作成に失敗しました。背景PDFが特殊な形式の場合は、PNG保存をご利用ください。"); }
   finally{ busy(false); }
 }
@@ -1638,7 +1650,7 @@ $("btn-save").addEventListener("click", async ()=>{
   } finally { busy(false); await applyCurrentPage(); }
   const data={v:6, pageNumbering, pnOpt, pages: outPages};
   const blob=new Blob([JSON.stringify(data)],{type:"application/json"});
-  download(URL.createObjectURL(blob),`広域図_${stamp()}.json`);
+  download(URL.createObjectURL(blob),`PDF-Editor_${stamp()}.json`);
 });
 $("btn-load").addEventListener("click", ()=> $("file-json").click());
 $("file-json").addEventListener("change", e=>{ if(e.target.files[0]) loadJSONFile(e.target.files[0]); e.target.value=""; });
