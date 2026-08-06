@@ -1,11 +1,13 @@
 <!DOCTYPE html>
-<!-- saved from url=(0062)file:///C:/Users/220134_anabuki/Downloads/pdf-editor-v6.7.html -->
+<!-- saved from url=(0064)file:///C:/Users/220134_anabuki/Downloads/pdf-editor-v6.7.1.html -->
 <html lang="ja"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>PDF-Editor｜地図・PDF編集・再編集PDF・ページ番号</title>
 <script src="./PDF-Editor｜地図・PDF編集・再編集PDF・ページ番号_files/pdf.min.js.ダウンロード"></script>
+<script>if(!window.pdfjsLib){window.__PDFJS_ALT=1;document.write('<scr'+'ipt src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"><\/scr'+'ipt>');}</script>
 <script src="./PDF-Editor｜地図・PDF編集・再編集PDF・ページ番号_files/pdf-lib.min.js.ダウンロード"></script>
+<script>if(!window.PDFLib){document.write('<scr'+'ipt src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"><\/scr'+'ipt>');}</script>
 <style>
   :root{
     --panel:#1b232c; --panel-2:#232d38; --line:#33404e;
@@ -410,9 +412,21 @@
 <script>
 (function(){
 "use strict";
-pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
-const PDFJS_CMAP="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/";
-const PDFJS_FONTS="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/standard_fonts/";
+let HAS_PDFJS = (typeof pdfjsLib!=="undefined") && !!pdfjsLib;
+let HAS_PDFLIB = (typeof PDFLib!=="undefined") && !!PDFLib;
+const PBASE = window.__PDFJS_ALT ? "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/" : "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/";
+if(HAS_PDFJS){ try{ pdfjsLib.GlobalWorkerOptions.workerSrc = PBASE + (window.__PDFJS_ALT ? "build/pdf.worker.min.js" : "pdf.worker.min.js"); }catch(e){ HAS_PDFJS=false; } }
+const PDFJS_CMAP = PBASE + "cmaps/";
+const PDFJS_FONTS = PBASE + "standard_fonts/";
+if(!HAS_PDFJS){
+  try{
+    const bar=document.createElement("div");
+    bar.style.cssText="position:fixed;left:0;right:0;top:0;z-index:99999;background:#b23b2e;color:#fff;padding:9px 14px;font-size:13px;line-height:1.5;text-align:center";
+    bar.innerHTML="PDF機能の読み込みに失敗しました。ネット接続・広告ブロッカー・社内ネットワークの制限をご確認のうえ、ページを再読み込みしてください。<br>（画像ファイルの読み込み・編集・保存はこのままご利用いただけます）";
+    document.addEventListener("DOMContentLoaded", ()=>document.body.appendChild(bar));
+    if(document.body) document.body.appendChild(bar);
+  }catch(e){}
+}
 
 document.querySelectorAll("#tabs .tab").forEach(t=>{
   t.addEventListener("click", ()=>{
@@ -1304,6 +1318,7 @@ function pdfPageStub(buf, doc, pageIndex){
   return {w:0,h:0,bgImage:null,bgKind:"pdf",pdfBuf:buf,pdfPage:pageIndex,pdfDoc:doc,items:[],undo:[],redo:[]};
 }
 async function loadPdfFile(file){
+  if(!HAS_PDFJS){ alert("PDF機能を読み込めませんでした。\nインターネット接続や広告ブロッカー・拡張機能・社内ネットワークの制限をご確認のうえ、ページを再読み込みしてください。\n（画像ファイルはそのまま読み込めます）"); return; }
   busy(true);
   try{
     const buf=await file.arrayBuffer();
@@ -1591,6 +1606,7 @@ function buildAnnotForItem(out, ctxp, it, pw, ph, s){
   });
 }
 async function exportPDF(){
+  if(!HAS_PDFLIB){ alert("PDF出力機能を読み込めませんでした。ページを再読み込みしてください。\n（PNG保存はご利用いただけます）"); return; }
   commitCurrentToPage();
   const hasContent = pages.some(p=> p.bgKind || (p.items&&p.items.length));
   if(!hasContent){ alert("先に背景の地図を読み込むか、作図してください。"); return; }
